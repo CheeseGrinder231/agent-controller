@@ -1,0 +1,9 @@
+.build/
+.module-cache/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+.DS_Store
+output/
+.agent-controller-signing-identity
+/AGENTS.md
