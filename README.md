@@ -5,6 +5,8 @@
 
   <h1>Agent Controller</h1>
 
+  English | [简体中文](README.zh-CN.md)
+
   [![Swift 6.1](https://img.shields.io/badge/Swift-6.1-F05138?logo=swift&logoColor=white)](https://www.swift.org/)
   [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-111111?logo=apple&logoColor=white)](https://www.apple.com/macos/)
   [![Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-5B8DEF)](LICENSE)
