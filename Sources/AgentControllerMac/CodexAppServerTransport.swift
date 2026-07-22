@@ -4,13 +4,11 @@ import Foundation
 enum CodexAppServerRequest: Sendable {
     case list(limit: Int)
     case read(threadID: String)
-    case start(cwd: String)
 
     var method: String {
         switch self {
         case .list: "thread/list"
         case .read: "thread/read"
-        case .start: "thread/start"
         }
     }
 
@@ -28,11 +26,6 @@ enum CodexAppServerRequest: Sendable {
             [
                 "threadId": threadID,
                 "includeTurns": false,
-            ]
-        case .start(let cwd):
-            [
-                "cwd": cwd,
-                "ephemeral": false,
             ]
         }
     }

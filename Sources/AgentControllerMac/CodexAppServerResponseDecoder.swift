@@ -56,35 +56,6 @@ extension CodexAppServerClient {
         return projects
     }
 
-    static func decodeStartedSession(
-        from response: Data,
-        expectedCwd: String
-    ) throws -> CodexSessionSummary {
-        let result = try resultObject(from: response)
-        guard let responseCwd = result["cwd"] as? String,
-              normalizedProjectPath(responseCwd) == expectedCwd,
-              let thread = result["thread"] as? [String: Any],
-              let threadID = thread["id"] as? String,
-              let ephemeral = thread["ephemeral"] as? Bool,
-              !ephemeral,
-              isValidThreadID(threadID),
-              let threadCwd = thread["cwd"] as? String,
-              normalizedProjectPath(threadCwd) == expectedCwd else {
-            throw CodexSessionClientError.invalidResponse
-        }
-        return CodexSessionSummary(
-            id: threadID,
-            title: displayTitle(
-                name: thread["name"] as? String,
-                preview: thread["preview"] as? String ?? ""
-            ),
-            project: projectName(for: expectedCwd),
-            workingDirectory: expectedCwd,
-            updatedAt: threadDate(thread) ?? Date(),
-            status: sessionStatus(thread["status"] as? [String: Any] ?? [:])
-        )
-    }
-
     static func decodeThreadID(from response: Data) throws -> String {
         let result = try resultObject(from: response)
         guard let thread = result["thread"] as? [String: Any],
@@ -116,14 +87,6 @@ extension CodexAppServerClient {
         guard !trimmed.isEmpty, NSString(string: trimmed).isAbsolutePath else { return nil }
         let normalized = URL(fileURLWithPath: trimmed, isDirectory: true).standardizedFileURL.path
         return normalized == "/" ? nil : normalized
-    }
-
-    static func startRequestParams(cwd: String) -> [String: Any] {
-        CodexAppServerRequest.start(cwd: cwd).params
-    }
-
-    static var startRequestMethod: String {
-        CodexAppServerRequest.start(cwd: "/").method
     }
 
     static func isAvailableProjectDirectory(_ path: String) -> Bool {

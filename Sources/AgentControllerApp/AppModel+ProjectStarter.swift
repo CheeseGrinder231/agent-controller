@@ -79,7 +79,11 @@ extension AppModel {
                 detail: "Session Starter cancelled."
             )
         case .commitSelection(let path, let frozenContext):
-            startSession(path: path, frozenContext: frozenContext, monitorEventID: monitorEventID)
+            openNewSessionPage(
+                path: path,
+                frozenContext: frozenContext,
+                monitorEventID: monitorEventID
+            )
         }
     }
 
@@ -97,7 +101,7 @@ extension AppModel {
         )
     }
 
-    private func startSession(
+    private func openNewSessionPage(
         path: String,
         frozenContext: ApplicationContext,
         monitorEventID: UUID?
@@ -114,12 +118,12 @@ extension AppModel {
             return
         }
         hideSelector()
-        publishEvent("Starting a new Codex session…")
-        finishInputMonitorEvent(monitorEventID, status: .routed, detail: "Starting selected project.")
+        publishEvent("Opening a new Codex session page…")
+        finishInputMonitorEvent(monitorEventID, status: .routed, detail: "Opening selected project.")
         commitTask?.cancel()
         let token = commitGate.begin()
         commitTask = Task { [weak self] in
-            await self?.performSessionStart(
+            await self?.performNewSessionOpen(
                 project: selectedProject,
                 frozenContext: frozenContext,
                 token: token,
@@ -128,7 +132,7 @@ extension AppModel {
         }
     }
 
-    private func performSessionStart(
+    private func performNewSessionOpen(
         project: CodexProjectSummary,
         frozenContext: ApplicationContext,
         token: UInt64,
@@ -146,63 +150,89 @@ extension AppModel {
                 )
                 return
             }
-            let startedSession = try await sessionClient.startSession(in: project)
+            let modeShortcut = try codexModeShortcutResolver.resolve()
+            try keyboardPulseAdapter.pulse(
+                modeShortcut,
+                frozenContext: frozenContext,
+                targetBundleIdentifier: CodexModeShortcutResolver.contract.targetBundleIdentifier
+            )
+            accessibilityAuthorized = true
+            try await Task.sleep(for: .milliseconds(180))
             guard canCommit(token: token, frozenContext: frozenContext) else {
-                publishEvent("Session created, but Codex focus changed before it could open.")
+                publishEvent("Cancelled: Codex focus changed while switching modes.")
                 finishInputMonitorEvent(
                     monitorEventID,
                     status: .cancelled,
-                    detail: "Session created; focus changed before opening."
+                    detail: "Focus changed while switching to Codex mode."
                 )
-                refreshSessions()
                 return
             }
-            do {
-                try sessionOpener.open(threadID: startedSession.id)
-            } catch {
-                guard commitGate.isCurrent(token) else { return }
-                publishEvent("Session started, but Codex did not open its task link.")
-                finishInputMonitorEvent(
-                    monitorEventID,
-                    status: .failed,
-                    detail: "Session created; task link was rejected."
-                )
-                refreshSessions()
-                return
-            }
+            try sessionOpener.openNewSession(projectPath: project.path)
             guard !Task.isCancelled, commitGate.isCurrent(token) else { return }
-            managedStopSession = startedSession
-            publishEvent("Started a new Codex session in the selected project.")
+            managedStopSession = nil
+            publishEvent("Opened Codex's new session page in the selected project.")
             finishInputMonitorEvent(
                 monitorEventID,
                 status: .completed,
-                detail: "New project session opened."
+                detail: "New project session page requested."
             )
             refreshSessions()
-        } catch is CancellationError {
+        } catch {
+            handleNewSessionOpenError(error, token: token, monitorEventID: monitorEventID)
+        }
+    }
+
+    private func handleNewSessionOpenError(
+        _ error: Error,
+        token: UInt64,
+        monitorEventID: UUID?
+    ) {
+        if error is CancellationError {
             finishInputMonitorEvent(
                 monitorEventID,
                 status: .cancelled,
                 detail: "Session start cancelled."
             )
-        } catch CodexSessionClientError.projectUnavailable {
-            guard commitGate.isCurrent(token) else { return }
+            return
+        }
+        guard commitGate.isCurrent(token) else { return }
+        switch error {
+        case CodexSessionClientError.projectUnavailable:
             publishEvent("Blocked: that Codex project folder is no longer available.")
             finishInputMonitorEvent(
                 monitorEventID,
                 status: .blocked,
                 detail: "Selected project is unavailable."
             )
-            refreshSessions()
-        } catch {
-            guard commitGate.isCurrent(token) else { return }
-            publishEvent("Blocked: Codex could not start a session for that project.")
+        case let pulseError as KeyboardChordPulseError:
+            synchronizeGlobalCommandState()
+            handlePulseError(
+                pulseError,
+                actionName: "Session Starter",
+                monitorEventID: monitorEventID
+            )
+        case CodexModeShortcutError.commandDisabled:
+            publishEvent("Blocked: Codex's mode-switch shortcut is disabled.")
+            finishInputMonitorEvent(
+                monitorEventID,
+                status: .blocked,
+                detail: "Codex mode-switch shortcut is disabled."
+            )
+        case CodexModeShortcutError.unsupportedShortcut:
+            publishEvent("Blocked: Codex's mode-switch shortcut is not supported.")
+            finishInputMonitorEvent(
+                monitorEventID,
+                status: .blocked,
+                detail: "Codex mode-switch shortcut is unsupported."
+            )
+        default:
+            publishEvent("Blocked: Codex did not open a new task page for that project.")
             finishInputMonitorEvent(
                 monitorEventID,
                 status: .failed,
-                detail: "Session start adapter rejected the request."
+                detail: "New-session link was rejected."
             )
-            refreshSessions()
         }
+        refreshSessions()
     }
 }

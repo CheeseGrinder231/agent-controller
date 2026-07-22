@@ -70,6 +70,7 @@ final class AppModel: ObservableObject {
     let sessionOpener = CodexSessionOpener()
     let voiceAdapter = CodexDictationShortcutAdapter()
     let keyboardPulseAdapter = KeyboardChordPulseAdapter()
+    let codexModeShortcutResolver = CodexModeShortcutResolver()
     let scrollAdapter = CodexScrollAdapter()
     let stopAdapter = CodexDesktopStopAdapter()
     let mappingStore: ControllerMappingStore

@@ -26,7 +26,7 @@ It does not replace Codex, scrape its sidebar, or mirror its interface.
 | Input | Default action | Scope |
 |---|---|---|
 | `LB` | Hold to preview recent tasks; release to open one | Codex |
-| `L3` | Hold to preview project roots; release to start a task there | Codex |
+| `L3` | Hold to preview project roots; release to open a new task there | Codex |
 | `RB` | Hold to talk; release to finish dictation | Codex |
 | `X` | Stop the managed or frontmost task | Codex |
 | Right stick | Proportional vertical scrolling | Codex |
@@ -67,16 +67,19 @@ and open that exact task.
 ### Project-based Session Starter
 
 Hold `L3` to freeze recent project roots discovered from real Codex sessions.
-Release on a project to start one persistent task with that exact working
-directory. Cancel, focus drift, disconnect, or an invalid directory creates
-nothing.
+Release on a project to invoke Codex Desktop's app-scoped `switchToMode2`
+command, then open its native new-session page with that exact working directory
+selected. Agent Controller follows Codex's configured shortcut for that command
+(default `Control+2`) and therefore requires Accessibility for this step. The
+task remains uncreated until you submit its first prompt. Cancel, focus drift,
+disconnect, or an invalid directory opens nothing.
 
 ### Push to Talk, Stop, and scrolling
 
 `RB` delegates audio capture and transcription to Codex, leaving the result
-editable and unsent. `X` stops the exact task last opened through `LB` or
-created through `L3`; a bounded current-task fallback is available when no
-managed target exists. The right stick sends proportional scroll events only
+editable and unsent. `X` stops the exact task last opened through `LB`; a
+bounded current-task fallback covers a task started from the `L3` composer or
+any other frontmost task. The right stick sends proportional scroll events only
 after revalidating the same frontmost Codex window.
 
 ## Safety model

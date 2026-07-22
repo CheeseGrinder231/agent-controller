@@ -91,6 +91,11 @@ public struct KeyboardChord: Codable, Equatable, Hashable, Sendable {
         key: Key(displayName: "Escape", keyCode: 53),
         triggerMode: .pulse
     )
+    public static let defaultCodexMode = KeyboardChord(
+        modifiers: [.control],
+        key: Key(displayName: "2", keyCode: 19),
+        triggerMode: .pulse
+    )
 
     public let modifiers: [Modifier]
     public let key: Key

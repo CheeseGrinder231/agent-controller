@@ -152,7 +152,7 @@ extension AppModel {
         }
         isStoppingCodex = true
         finishInputMonitorEvent(monitorEventID, status: .routed, detail: "Exact-session Stop routed.")
-        publishStopEvent("X received. Stopping the exact session opened by LB or L3…")
+        publishStopEvent("X received. Stopping the exact session opened by LB…")
         let stopAdapter = stopAdapter
         stopTask = Task { [weak self] in
             guard let self else { return }
@@ -184,7 +184,7 @@ extension AppModel {
             guard !Task.isCancelled else { return }
             switch result {
             case .interrupted:
-                publishStopEvent("X stopped the exact session opened by LB or L3.")
+                publishStopEvent("X stopped the exact session opened by LB.")
                 finishInputMonitorEvent(monitorEventID, status: .completed, detail: "Exact session stopped.")
             case .idle:
                 publishStopEvent("X target was already idle.")

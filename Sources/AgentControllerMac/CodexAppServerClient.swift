@@ -7,7 +7,6 @@ public enum CodexSessionClientError: LocalizedError, Equatable, Sendable {
     case invalidResponse
     case sessionUnavailable
     case projectUnavailable
-    case sessionStartRejected
     case invalidThreadIdentifier
     case deepLinkRejected
 
@@ -23,8 +22,6 @@ public enum CodexSessionClientError: LocalizedError, Equatable, Sendable {
             "That Codex session is no longer available."
         case .projectUnavailable:
             "That Codex project folder is no longer available."
-        case .sessionStartRejected:
-            "Codex did not start a session for that project."
         case .invalidThreadIdentifier:
             "Codex returned an invalid session identifier."
         case .deepLinkRejected:
@@ -68,20 +65,6 @@ public struct CodexAppServerClient: Sendable {
         let projects = try Self.decodeProjects(from: response, limit: safeProjectLimit)
             .filter { Self.isAvailableProjectDirectory($0.path) }
         return CodexInventorySnapshot(sessions: sessions, projects: projects)
-    }
-
-    public func startSession(in project: CodexProjectSummary) async throws -> CodexSessionSummary {
-        guard let normalizedPath = Self.normalizedProjectPath(project.path),
-              normalizedPath == project.path,
-              Self.isAvailableProjectDirectory(normalizedPath) else {
-            throw CodexSessionClientError.projectUnavailable
-        }
-        let response = try await request(.start(cwd: normalizedPath))
-        do {
-            return try Self.decodeStartedSession(from: response, expectedCwd: normalizedPath)
-        } catch CodexSessionClientError.sessionUnavailable {
-            throw CodexSessionClientError.sessionStartRejected
-        }
     }
 
     public func sessionExists(_ threadID: String) async throws -> Bool {

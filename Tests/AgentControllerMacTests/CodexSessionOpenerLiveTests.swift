@@ -14,4 +14,15 @@ final class CodexSessionOpenerLiveTests: XCTestCase {
         )
         try CodexSessionOpener().open(threadID: threadID)
     }
+
+    func testNewSessionDeepLinkIsAccepted() throws {
+        try XCTSkipUnless(
+            ProcessInfo.processInfo.environment["AGENT_CONTROLLER_LIVE_CODEX_NEW_SESSION_PROJECT"] != nil,
+            "Set AGENT_CONTROLLER_LIVE_CODEX_NEW_SESSION_PROJECT for reversible new-session proof."
+        )
+        let projectPath = try XCTUnwrap(
+            ProcessInfo.processInfo.environment["AGENT_CONTROLLER_LIVE_CODEX_NEW_SESSION_PROJECT"]
+        )
+        try CodexSessionOpener().openNewSession(projectPath: projectPath)
+    }
 }

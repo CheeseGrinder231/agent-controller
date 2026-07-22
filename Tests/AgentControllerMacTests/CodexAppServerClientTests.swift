@@ -33,47 +33,6 @@ import AgentControllerCore
     #expect(CodexAppServerClient.normalizedProjectPath("   ") == nil)
 }
 
-@Test func startedSessionRequiresTheExactRequestedProject() throws {
-    let response = try #require(startFixtureResponse.data(using: .utf8))
-    let session = try CodexAppServerClient.decodeStartedSession(
-        from: response,
-        expectedCwd: "/tmp"
-    )
-
-    #expect(session.id == "019f8f00-0000-7000-8000-000000000001")
-    #expect(session.title == "Untitled Codex chat")
-    #expect(session.project == "tmp")
-    #expect(session.workingDirectory == "/tmp")
-    #expect(throws: CodexSessionClientError.invalidResponse) {
-        try CodexAppServerClient.decodeStartedSession(from: response, expectedCwd: "/tmp/other")
-    }
-}
-
-@Test func threadStartSendsOnlyTheFrozenProjectPathAndPersistenceFlag() async throws {
-    let params = CodexAppServerClient.startRequestParams(cwd: "/tmp")
-    #expect(CodexAppServerClient.startRequestMethod == "thread/start")
-    #expect(params.count == 2)
-    #expect(params["cwd"] as? String == "/tmp")
-    #expect(params["ephemeral"] as? Bool == false)
-
-    let script = #"""
-    #!/bin/sh
-    IFS= read -r _ || exit 1
-    IFS= read -r _ || exit 1
-    IFS= read -r _ || exit 1
-    printf '%s\n' '{"id":2,"result":{"cwd":"/tmp","thread":{"id":"019f8f00-0000-7000-8000-000000000001","preview":"","cwd":"/tmp","ephemeral":false,"updatedAt":1784541700,"status":{"type":"idle"}}}}'
-    """#
-    let executable = try makeFakeServer(script: script)
-    defer { try? FileManager.default.removeItem(at: executable.deletingLastPathComponent()) }
-    let client = CodexAppServerClient(executableURL: executable, requestTimeout: 2)
-    let project = CodexProjectSummary(name: "tmp", path: "/tmp", lastUsedAt: .now)
-
-    let session = try await client.startSession(in: project)
-
-    #expect(session.id == "019f8f00-0000-7000-8000-000000000001")
-    #expect(session.workingDirectory == "/tmp")
-}
-
 @Test func titleFallbackNeverProducesAnEmptyRow() {
     #expect(CodexAppServerClient.displayTitle(name: "  Named chat  ", preview: "Preview") == "Named chat")
     #expect(CodexAppServerClient.displayTitle(name: nil, preview: "  Preview  ") == "Preview")
@@ -113,6 +72,29 @@ import AgentControllerCore
     let url = try CodexSessionOpener.deepLink(threadID: "thread_ABC-123.~")
 
     #expect(url.absoluteString == "codex://threads/thread_ABC-123.~")
+}
+
+@Test func newSessionDeepLinkCarriesTheExactExistingProjectPath() throws {
+    let directory = FileManager.default.temporaryDirectory
+        .appendingPathComponent("agent controller & opener", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+
+    let path = directory.standardizedFileURL.path
+    let url = try CodexSessionOpener.newSessionDeepLink(projectPath: path)
+    let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+
+    #expect(components.scheme == "codex")
+    #expect(components.host == "new")
+    #expect(components.queryItems == [URLQueryItem(name: "path", value: path)])
+}
+
+@Test func newSessionDeepLinkRejectsAnUnavailableProjectPath() {
+    #expect(throws: CodexSessionClientError.projectUnavailable) {
+        try CodexSessionOpener.newSessionDeepLink(
+            projectPath: "/private/tmp/agent-controller-project-that-does-not-exist"
+        )
+    }
 }
 
 @Test func appServerRequestHasABoundedDeadline() async throws {
@@ -311,23 +293,6 @@ private let projectFixtureResponse = #"""
         "parentThreadId": "019f7e48-66f8-7192-8446-d4e2cf9ae0e6"
       }
     ]
-  }
-}
-"""#
-
-private let startFixtureResponse = #"""
-{
-  "id": 2,
-  "result": {
-    "cwd": "/tmp",
-    "thread": {
-      "id": "019f8f00-0000-7000-8000-000000000001",
-      "preview": "",
-      "cwd": "/tmp",
-      "ephemeral": false,
-      "updatedAt": 1784541700,
-      "status": {"type": "idle"}
-    }
   }
 }
 """#

@@ -37,7 +37,7 @@ struct CodexSettingsView: View {
                     MappingSummaryRow(
                         input: "L3",
                         title: "Session Starter",
-                        detail: "Choose a project before starting a new task.",
+                        detail: "Choose a project, switch to Codex, then start a new task.",
                         value: projectCountValue,
                         actionLabel: "Details",
                         selected: selectedMapping == .projectStarter,
@@ -56,7 +56,7 @@ struct CodexSettingsView: View {
                     MappingSummaryRow(
                         input: "X",
                         title: "Stop",
-                        detail: "Stop the current task, or the exact task opened by LB or L3.",
+                        detail: "Stop the current task, or the exact task opened by LB.",
                         value: stopMappingValue,
                         actionLabel: "Details",
                         selected: selectedMapping == .stop,
@@ -148,7 +148,7 @@ struct CodexSettingsView: View {
                 LabeledContent("Commit", value: "Release L3")
                 LabeledContent("Projects", value: "Recent Codex working folders")
                 HStack {
-                    Text("The project list freezes for each hold. Release starts one new task in the exact selected folder.")
+                    Text("The project list freezes for each hold. Release switches to Codex mode, then opens its new-task page in the exact selected folder.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -170,7 +170,7 @@ struct CodexSettingsView: View {
                         .lineLimit(1)
                         .help(model.managedStopSession?.title ?? "No exact selector target")
                 }
-                Text("With no selector target, X stops the current Codex response. After LB opens or L3 starts a task, X stops that exact task.")
+                Text("With no LB selector target, X stops the current Codex response, including tasks started from the L3 composer.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -231,7 +231,8 @@ struct CodexSettingsView: View {
     }
 
     private var projectCountValue: String {
-        model.recentProjects.isEmpty ? "No projects" : "\(model.recentProjects.count) ready"
+        if !model.accessibilityAuthorized { return "Needs Accessibility" }
+        return model.recentProjects.isEmpty ? "No projects" : "\(model.recentProjects.count) ready"
     }
 
     private var sessionInventoryValue: String {
